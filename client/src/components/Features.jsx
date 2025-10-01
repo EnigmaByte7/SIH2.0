@@ -3,7 +3,7 @@ import {HoverEffect} from "./ui/card-hover-effect";
 
 const Feautres = () => {
   return (
-    <div className="w-full p-4 bg-black">
+    <div className="w-full p-4 bg-black ">
         <div className="flex gap-5 items-center flex-col">
             <div className="font-mono text-4xl font-bold text-center text-white">
                 Advanced ML Technology

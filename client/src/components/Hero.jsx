@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { AuroraBackground } from "./ui/aurora-background";
+import HeroButton from "./HeroButton";
 
 const Hero = () => {
   return (
@@ -21,9 +22,7 @@ const Hero = () => {
         <div className="font-extralight text-base md:text-4xl dark:text-neutral-200 py-4">
           Our third attempt for SIH ...moye moye
         </div>
-        <button className="bg-black dark:bg-white rounded-full w-fit text-white dark:text-black px-4 py-2">
-          Dashboard
-        </button>
+      <HeroButton />
       </motion.div>
     </AuroraBackground>
   );
