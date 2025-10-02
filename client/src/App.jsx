@@ -5,12 +5,14 @@ import Faq from "./components/Faq";
 import About from "./components/About";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
+import AnalysisDashboard from "./components/AnalysisDashboard";
 
 const App = () => {
   return (
     <>
     <Navbar />
       <Hero />
+      <AnalysisDashboard/>
       <Features />
       <Faq />
       <About />
