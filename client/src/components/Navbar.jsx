@@ -9,7 +9,7 @@ export default function Navbar() {
         <li><a href="#about" className="hover:text-white">About</a></li>
         <li>
           <a
-            href="#dashboard"
+            href="/dashboard"
             className="bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-zinc-200"
           >
             Dashboard

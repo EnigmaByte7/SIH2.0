@@ -7,7 +7,8 @@ export default function HeroButton() {
   <div className="m-5 flex justify-center text-center">
       <HoverBorderGradient
         containerClassName="rounded-full"
-        as="button"
+        as="a"
+        href="/dashboard"
         className="bg-black text-white flex items-center space-x-2"
       >
         <span>Dashboard</span>
