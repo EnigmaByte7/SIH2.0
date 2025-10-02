@@ -60,6 +60,7 @@ const AnalysisDashboard = () => {
                 )}
             </div>
         </section>
+        
     );
 };
 

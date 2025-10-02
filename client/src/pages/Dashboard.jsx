@@ -23,6 +23,7 @@ const plugin = {
 };
 import { ChevronLeft } from 'lucide-react';
 import { useChartStore } from '../../useChart';
+import AnalysisDashboard from '../components/AnalysisDashboard';
 
 ChartJS.register(
   CategoryScale,
@@ -100,6 +101,8 @@ const Content = () => {
                     </div>
                 </ ThreeDCard>
             </div>
+
+        <AnalysisDashboard />
         </div>
     )
 }
