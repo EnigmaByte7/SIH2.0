@@ -1,75 +1,101 @@
-from flask import Flask, jsonify
-import pandas as pd
+from flask import Flask, request, jsonify
+from flask_cors import CORS 
 import joblib
-import os
 import numpy as np
+import pandas as pd
+import warnings
+import traceback # Needed for detailed error logging
+
+# -------------------------------------------------------------
+# 1. APP INITIALIZATION & WARNING SUPPRESSION
+# -------------------------------------------------------------
 
 # Initialize the Flask application
+# NOTE: The provided code was missing this line.
 app = Flask(__name__)
 
-# --- Load Model and Define Functions ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(BASE_DIR, 'fault_detector_model.joblib')
+# Crucial for allowing your MERN frontend (running on a different port/domain) to talk to Flask
+CORS(app) 
 
+# -------------------------------------------------------------
+# 2. CONFIGURATION & ASSET LOADING
+# -------------------------------------------------------------
+
+# --- File Paths ---
+MODEL_PATH = 'fault_classifier_model_optimized.pkl'
+SCALER_PATH = 'data_scaler.pkl'
+ENCODER_PATH = 'label_encoder.pkl'
+
+# --- Feature Names (Must match training data order) ---
+FEATURE_NAMES = [
+    'SensorA_V', 'SensorA_I', 
+    'SensorB_V', 'SensorB_I', 
+    'SensorC_V', 'SensorC_I', 
+    'SensorD_V', 'SensorD_I'
+]
+
+# --- Load Assets on Startup ---
 try:
-    model = joblib.load(model_path)
-    print("✅ Model loaded successfully from local path.")
-except FileNotFoundError:
-    print(f"❌ ERROR: Model file not found at {model_path}.")
-    model = None
+    print("Loading Model, Scaler, and Encoder...")
+    model = joblib.load(MODEL_PATH)
+    scaler = joblib.load(SCALER_PATH)
+    le = joblib.load(ENCODER_PATH)
+    print("Assets loaded successfully.")
+except Exception as e:
+    print(f"ERROR: Failed to load one or more assets. Check paths and file names. Error: {e}")
+    # Set to None to prevent the app from running predictions
+    model, scaler, le = None, None, None
 
-def extract_features(df, window_size=10):
-    sensors = sorted(list(set([col.split('_')[0] for col in df.columns if 'Sensor' in col])))
-    features_df = pd.DataFrame(index=df.index)
-    for sensor in sensors:
-        v_col, i_col = f'{sensor}_V', f'{sensor}_I'
-        if v_col in df.columns:
-            v_rolling = df[v_col].rolling(window=window_size)
-            features_df[f'{v_col}_mean'] = v_rolling.mean()
-            features_df[f'{v_col}_std'] = v_rolling.std()
-        if i_col in df.columns:
-            i_rolling = df[i_col].rolling(window=window_size)
-            features_df[f'{i_col}_mean'] = i_rolling.mean()
-            features_df[f'{i_col}_std'] = i_rolling.std()
-    features_df.dropna(inplace=True)
-    return features_df
+# -------------------------------------------------------------
+# 3. PREDICTION ROUTE
+# -------------------------------------------------------------
 
-LABEL_TO_FAULT_NAME = {
-    0: "Normal",
-    1: "Open_Circuit",
-    2: "LG_Fault_High_Imp",
-    # Add other mappings from your training data here if needed
-}
-
-# --- API Endpoint ---
-@app.route('/predict', methods=['POST'])
+@app.route('/predict_fault', methods=['POST'])
 def predict():
-    if model is None:
-        return jsonify({"status": "ERROR", "message": "Model not loaded."}), 500
+    if model is None or scaler is None or le is None:
+        return jsonify({"error": "Model assets not loaded on the server."}), 500
+
     try:
-        data_filepath = os.path.join(BASE_DIR, 'test_data.csv')
-        new_data = pd.read_csv(data_filepath)
+        data = request.get_json(force=True)
+        raw_features = data.get('sensor_values') 
         
-        features = extract_features(new_data.drop('Label', axis=1, errors='ignore'))
+        EXPECTED_FEATURES = 8
         
-        if features.empty:
-            return jsonify({"status": "ERROR", "message": "Not enough data for prediction."}), 400
+        # Validation Check
+        if not raw_features or not isinstance(raw_features, list) or len(raw_features) != EXPECTED_FEATURES:
+            print(f"ERROR: Invalid features received. Expected {EXPECTED_FEATURES}, got {len(raw_features) if isinstance(raw_features, list) else 'non-list'}.")
+            return jsonify({"error": f"Invalid feature array size. Expected {EXPECTED_FEATURES} sensor values."}), 400
 
-        predictions = model.predict(features)
+        # --- PANDAS FIX: Convert to DataFrame for Scaling ---
+        # 1. Convert the raw list into a Pandas DataFrame with the expected column names
+        input_df = pd.DataFrame(
+            [raw_features],  # Needs to be a list of lists (1 row)
+            columns=FEATURE_NAMES  # Use the defined feature names
+        )
+
+        # 2. Scale the data. The scaler now sees the correct feature names (Fixes UserWarning).
+        scaled_features = scaler.transform(input_df)
         
-        for i, p in enumerate(predictions):
-            if p != 0:
-                result = {
-                    "status": "FAULT",
-                    "time": new_data.loc[features.index[i], 'Time'],
-                    "type": LABEL_TO_FAULT_NAME.get(p, f"Unknown Fault ({p})"),
-                }
-                return jsonify(result)
+        # 3. Predict 
+        prediction_index = model.predict(scaled_features)[0]
         
-        return jsonify({"status": "NORMAL"})
+        # 4. Decode the result
+        fault_type = le.inverse_transform([prediction_index])[0]
+        
+        return jsonify({
+            "status": "success",
+            "fault_prediction": fault_type
+        })
+        
     except Exception as e:
-        return jsonify({"status": "ERROR", "message": str(e)}), 500
+        print("--- UNEXPECTED PYTHON ERROR IN FLASK ---")
+        traceback.print_exc()
+        return jsonify({"error": f"Internal Python error during prediction: {str(e)}"}), 500
 
-# --- Run Server ---
+# -------------------------------------------------------------
+# 4. SERVER RUN
+# -------------------------------------------------------------
+
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    # Run the Flask app
+    app.run(host='0.0.0.0', port=5000, debug=True)
