@@ -13,14 +13,15 @@ const MAX_DATA_POINTS = 50; // Max points to display on the chart before shiftin
 // ====================================================================
 const StatusCard = ({ lineId, data }) => {
     const getCardClasses = (status) => {
-        if (status === 'FAULT') return 'bg-red-100 border-red-500 text-red-700';
-        if (status === 'NORMAL') return 'bg-green-100 border-green-500 text-green-700';
+        if (status === 'FAULT') return 'bg-transparent border-red-500 text-red-400';
+        if (status === 'NORMAL') return 'bg-transparent border-lime-500 text-lime-400';
         if (status === 'ERROR' || status === 'AWAITING_DATA') return 'bg-gray-100 border-gray-500 text-gray-700';
-        return 'bg-gray-100 border-gray-500 text-gray-700';
+        return 'bg-transparent border-gray-600 text-gray-300';
     };
 
     const status = data.status;
     const faultType = data.fault;
+    const location = data.faultLocationSection; // <-- New variable name
 
     return (
         <div className={`p-6 rounded-lg border-2 shadow-xl transition-all duration-300 ${getCardClasses(status)}`}>
@@ -32,10 +33,17 @@ const StatusCard = ({ lineId, data }) => {
                 </p>
                 
                 {status === 'FAULT' && (
+                    <>
                     <p className="text-lg">
                         <strong className="w-32 inline-block">Fault Type:</strong> 
-                        <code className="bg-red-200 p-1 rounded-sm text-sm">{faultType}</code>
+                        <code className="font-bold p-1 rounded-sm text-sm">{faultType}</code>
                     </p>
+                    <p className="text-lg">
+                    {/* Display the determined section */}
+                    <strong className="w-32 inline-block">Section:</strong> 
+                    <span className="font-bold text-red-500">{location}</span>
+                    </p>
+                    </>
                 )}
                  {status !== 'FAULT' && (
                     <p className="text-lg">
@@ -53,9 +61,10 @@ const StatusCard = ({ lineId, data }) => {
 // ====================================================================
 const ChartComponent = ({ lineId, data }) => {
     return (
-        <div className="bg-white p-6 rounded-lg shadow-xl">
-            <h4 className="text-xl font-semibold mb-4 text-center">{lineId} Sensor Readings</h4>
-            <div style={{ width: '100%', height: 300 }}>
+        <div className="bg-transparent p-6 rounded-lg shadow-xl">
+            
+            <div style={{ height: 300 }}>
+                <h4 className="text-white text-xl font-semibold mb-4 text-center">{lineId} Sensor Readings</h4>
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                         data={data}
@@ -93,12 +102,12 @@ const AnalysisDashboard = () => {
         
         // Event listener for incoming live analysis results from Express
         socket.on('liveAnalysis', (data) => {
-            const { lineId, status, fault } = data;
+            const { lineId, status, fault, faultLocationSection } = data;
 
             // 1. Update latest status card for this line
             setLatestStatus(prevStatus => ({
                 ...prevStatus,
-                [lineId]: { status, fault }
+                [lineId]: { status, fault,faultLocationSection }
             }));
 
             // 2. Update chart data for this line
@@ -149,7 +158,7 @@ const AnalysisDashboard = () => {
 
     // Full return block for the main dashboard component
     return (
-        <section className="bg-slate-50 py-10 min-h-screen">
+        <section className="bg-transparent py-10 min-h-screen">
             <div className="container mx-auto px-8">
                 <h2 className="text-3xl font-bold mb-4 text-center">Multi-Line Fault Diagnosis Dashboard</h2>
                 
@@ -173,14 +182,15 @@ const AnalysisDashboard = () => {
 
                 {/* 2. GRAPH SECTION */}
                 <h3 className="text-2xl font-bold mb-6 border-b pb-2">Real-Time Sensor Plots</h3>
-                <div className="space-y-12">
-                    {/* Iterate over the keys in lineData to display one chart per line */}
+                {/* --- CRITICAL FIX: The wrapper must be a grid with 3 columns (3x2 layout) --- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {/* Dynamically render one chart component per line */}
                     {Object.keys(lineData).length > 0 ? (
                         Object.keys(lineData).map((lineId) => (
                             <ChartComponent key={lineId} lineId={lineId} data={lineData[lineId]} />
                         ))
                     ) : (
-                        <p className="text-center text-gray-500">No data received yet. Start the Express server to begin streaming.</p>
+                        <p className="text-center text-gray-400">No data received yet. Start the Express server to begin streaming.</p>
                     )}
                 </div>
             </div>
