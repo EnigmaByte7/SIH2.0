@@ -46,6 +46,52 @@ except Exception as e:
     # Set to None to prevent the app from running predictions
     model, scaler, le = None, None, None
 
+
+def determine_fault_section(fault_type, scaled_features):
+    """
+    Estimates the fault section by checking for the largest voltage drop between 
+    consecutive sensors (V_prev - V_current) along the radial feeder (A -> D).
+    """
+    
+    # 1. Handle Normal Status Immediately
+    if fault_type == 'Normal':
+        return "System OK / Nominal"
+    
+    # --- Feature Extraction (Ensure indices 0, 2, 4, 6 are Voltages) ---
+    V_A = scaled_features[0, 0] 
+    V_B = scaled_features[0, 2] 
+    V_C = scaled_features[0, 4] 
+    V_D = scaled_features[0, 6] 
+
+    # Define a minimum threshold for detection (e.g., 10% of the scaled range)
+    # This prevents noise from triggering a section change.
+    DROP_THRESHOLD = 0.15 
+    
+    # ----------------------------------------------------------------------
+    # 2. Prioritized Section Check (Starting from the furthest point, D -> A)
+    # ----------------------------------------------------------------------
+
+    # Check Drop 3: Section C-D
+    # The drop V_C - V_D must exceed the threshold
+    if (V_C - V_D) > DROP_THRESHOLD:
+        return "Section CD (Between C and D)"
+
+    # Check Drop 2: Section B-C
+    if (V_B - V_C) > DROP_THRESHOLD:
+        return "Section BC (Between B and C)"
+
+    # Check Drop 1: Section A-B
+    if (V_A - V_B) > DROP_THRESHOLD:
+        return "Section AB (Between A and B)"
+
+    # 3. Check Section S-A (Closest to Source)
+    # If no inter-sensor drop is significant, but the voltage at A is low (indicating a fault near the source).
+    if V_A < 0.85: 
+        return "Section SA (Near Source / Sensor A)"
+        
+    # 4. Final Fallback (If fault predicted but location logic is inconclusive)
+    return "Location Ambiguous (Fault Confirmed)"
+
 # -------------------------------------------------------------
 # 3. PREDICTION ROUTE
 # -------------------------------------------------------------
@@ -67,31 +113,38 @@ def predict():
             return jsonify({"error": f"Invalid feature array size. Expected {EXPECTED_FEATURES} sensor values."}), 400
 
         # --- PANDAS FIX: Convert to DataFrame for Scaling ---
-        # 1. Convert the raw list into a Pandas DataFrame with the expected column names
         input_df = pd.DataFrame(
-            [raw_features],  # Needs to be a list of lists (1 row)
-            columns=FEATURE_NAMES  # Use the defined feature names
+            [raw_features],
+            columns=FEATURE_NAMES
         )
 
-        # 2. Scale the data. The scaler now sees the correct feature names (Fixes UserWarning).
         scaled_features = scaler.transform(input_df)
         
-        # 3. Predict 
+        # 1. Predict Fault Type (Classification)
         prediction_index = model.predict(scaled_features)[0]
         
-        # 4. Decode the result
+        # 2. Decode the result
         fault_type = le.inverse_transform([prediction_index])[0]
         
-        return jsonify({
+        # 3. Determine Fault Location (NEW STEP)
+        fault_location_section = determine_fault_section(fault_type, scaled_features)
+       
+        # --- DIAGNOSTIC PRINT (CRITICAL) ---
+        response_payload = {
             "status": "success",
-            "fault_prediction": fault_type
-        })
+            "fault_prediction": fault_type,
+            "fault_location_section": fault_location_section 
+        }
+        # print("--- FLASK RESPONSE PAYLOAD ---")
+        # print(response_payload)
+
+        return jsonify(response_payload)
         
     except Exception as e:
+        import traceback
         print("--- UNEXPECTED PYTHON ERROR IN FLASK ---")
         traceback.print_exc()
         return jsonify({"error": f"Internal Python error during prediction: {str(e)}"}), 500
-
 # -------------------------------------------------------------
 # 4. SERVER RUN
 # -------------------------------------------------------------
