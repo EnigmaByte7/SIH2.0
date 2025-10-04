@@ -8,7 +8,7 @@ import {
 
 const Faq = () => {
     return  (
-        <div className="flex-1 items-center justify-center p-32 border-t border-b border-zinc-800 bg-zinc-900  text-white mt-32" >
+        <div id="faq"  className="flex-1 items-center justify-center p-32 border-t border-b border-zinc-800 bg-zinc-900  text-white mt-32" >
             <div className="font-mono text-4xl font-bold text-center ">
                 Frequently Asked Questions
             </div>

@@ -2,7 +2,7 @@ import React from 'react'
 
 export default function About() {
   return (
-    <div className='flex flex-col gap-14 items-center justify-center mx-auto text-white'>
+    <div id = "about" className='flex flex-col gap-14 items-center justify-center mx-auto text-white'>
         <div className='text-4xl font-mono font-bold text-center mt-40'>
             About
         </div>
