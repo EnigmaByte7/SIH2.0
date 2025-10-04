@@ -171,7 +171,7 @@ const AnalysisDashboard = () => {
         
         // Event listener for incoming live analysis results from Express
         socket.on('liveAnalysis', (data) => {
-            const { lineId, status, fault, faultLocationSection } = data;
+            const { lineId, status, fault, faultLocationSection , timestamp, voltage, current } = data;
 
             // 1. Update latest status card for this line
             setLatestStatus(prevStatus => ({
@@ -181,10 +181,11 @@ const AnalysisDashboard = () => {
 
             // 2. Update chart data for this line
             setLineData(prevData => {
+                const displayTime = new Date(timestamp).toLocaleTimeString();
                 const newPoint = {
-                    time: new Date(data.timestamp).toLocaleTimeString(),
-                    Voltage: data.voltage,
-                    Current: data.current,
+                    time: displayTime,
+                    Voltage: voltage,
+                    Current: current,
                 };
                 
                 // Get data for this specific line, defaulting to an empty array
