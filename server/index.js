@@ -181,7 +181,8 @@ io.on('connection', (socket) => {
                     status: 'TRIPPED', 
                     fault: 'Isolated',
                     voltage: 0, 
-                    current: 0 
+                    current: 0,
+                    timestamp: Date.now() // <-- ENSURE FRESH TIMESTAMP IS SENT
                 });
                 continue; // Skip the rest of the loop for this line
             }
