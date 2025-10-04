@@ -1,5 +1,13 @@
-Flask
-pandas
-joblib
-scikit-learn>=1.4.0
-numpy
+# requirements.txt for the Flask AI Prediction Engine (Port 5000)
+
+# Web Server & Framework
+Flask==3.0.3
+Flask-Cors==4.0.1  # For handling frontend requests
+
+# Core Data Science Libraries
+pandas==2.2.2      # For DataFrame processing
+numpy==1.26.4      # For numerical operations
+
+# Machine Learning & Persistence
+scikit-learn==1.4.2 # Ensure this version matches what was used for training (or is close)
+joblib==1.4.2      # For loading/saving the model and scaler
