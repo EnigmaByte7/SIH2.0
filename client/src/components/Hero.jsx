@@ -20,7 +20,7 @@ const Hero = () => {
           ML based Fault detection
         </div>
         <div className="font-extralight text-base md:text-4xl dark:text-neutral-200 py-4">
-          Our third attempt for SIH ...moye moye
+          An Intelligent, Real-Time Solution for Sectional Fault Localization and High-Fidelity Grid Health Monitoring.
         </div>
       <HeroButton />
       </motion.div>

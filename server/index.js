@@ -26,7 +26,56 @@ app.use(express.json());
 
 // You can keep your existing '/api' route
 app.use('/api', testRoute);
+// --- NEW: Circuit Control Endpoint ---
+// This endpoint receives the signal from the React frontend
+app.post('/api/control/trip', (req, res) => {
+    // 1. Get data sent by React
+    const { lineId, faultType } = req.body;
+    
+    if (!lineId || !faultType) {
+        return res.status(400).json({ status: "ERROR", message: "Missing line ID or fault type for trip signal." });
+    }
 
+    // 2. LOG THE CRITICAL ACTION
+    console.log(`\n🚨 TRIP SIGNAL RECEIVED: Isolating Circuit for Line ${lineId}`);
+    console.log(`Fault Type Predicted: ${faultType}`);
+    
+    // --- REAL WORLD ACTION GOES HERE ---
+    // For a physical system, this is where you would send a command
+    // via a separate protocol (MQTT, IoT API, Serial Port) to trip the relay.
+    // Example: sendMqttCommand('RELAY/LINE_TRIP', { line: lineId });
+    // -----------------------------------
+    // CRITICAL FIX: Update the global state
+    if (CIRCUIT_STATUS.hasOwnProperty(lineId)) {
+        CIRCUIT_STATUS[lineId] = true; 
+    }
+    // 3. Return a successful confirmation back to the frontend
+    return res.status(200).json({ 
+        status: "TRIPPED", 
+        message: `Circuit breaker for Line ${lineId} successfully isolated. Action logged on server.`
+    });
+});
+
+// --- NEW: Circuit Reset Endpoint ---
+app.post('/api/control/reset', (req, res) => {
+    const { lineId } = req.body;
+    
+    if (!lineId) {
+        return res.status(400).json({ status: "ERROR", message: "Missing line ID for reset signal." });
+    }
+
+    // 1. Reset the global state flag
+    if (CIRCUIT_STATUS.hasOwnProperty(lineId)) {
+        CIRCUIT_STATUS[lineId] = false; // Set status back to 'monitoring'
+    }
+
+    console.log(`\n🟢 RESET SIGNAL RECEIVED: Resuming monitoring for Line ${lineId}`);
+
+    return res.status(200).json({ 
+        status: "RESET", 
+        message: `Monitoring resumed for Line ${lineId}. Data stream restarting.`
+    });
+});
 // --- MongoDB Connection ---
 const uri = process.env.MONGO_URI;
 mongoose.connect(uri)
@@ -110,6 +159,12 @@ const LINE_CONFIG = [
     { id: 'Line 6', nominal_voltage: 1.05, port: 'SensorF' }
     // Add more lines as needed
 ];
+// NEW: Global state map to track which circuits are tripped
+// Initialize all to false (not tripped)
+const CIRCUIT_STATUS = LINE_CONFIG.reduce((acc, line) => {
+    acc[line.id] = false; 
+    return acc;
+}, {});
 // --- Socket.IO Connection Handler ---
 io.on('connection', (socket) => {
     console.log(`User connected with ID: ${socket.id}`);
@@ -118,6 +173,18 @@ io.on('connection', (socket) => {
      const intervalId = setInterval(async () => {
         
         for (const [index, line] of LINE_CONFIG.entries()) {
+            // --- CRITICAL FIX: Skip prediction if the line is tripped ---
+            if (CIRCUIT_STATUS[line.id] === true) {
+                // Optionally send a static 'TRIPPED' status back to React to freeze the card display
+                socket.emit('liveAnalysis', { 
+                    lineId: line.id, 
+                    status: 'TRIPPED', 
+                    fault: 'Isolated',
+                    voltage: 0, 
+                    current: 0 
+                });
+                continue; // Skip the rest of the loop for this line
+            }
             // --- NEW: Stagger the requests ---
             // Introduce a small delay for every line processed (e.g., 50ms per line)
             // This prevents the system from being overwhelmed at the start of the interval.

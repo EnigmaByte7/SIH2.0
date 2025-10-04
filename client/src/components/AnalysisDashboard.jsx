@@ -8,10 +8,59 @@ const socket = io('http://localhost:5001');
 
 const MAX_DATA_POINTS = 50; // Max points to display on the chart before shifting
 
+const handleTrip = async (lineId, faultType) => {
+    console.log(`Sending trip signal for ${lineId} (Fault: ${faultType})`);
+    
+    try {
+        const response = await fetch('/api/control/trip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lineId, faultType })
+        });
+
+        // 1. Check if the response was NOT OK (e.g., 404, 500)
+        if (!response.ok) {
+            // Read the raw response text to see what the server sent back (e.g., HTML for 404)
+            const errorText = await response.text(); 
+            
+            // Throw a custom error based on the status code
+            throw new Error(`Server Error (${response.status}): Could not trip circuit. Details: ${errorText.substring(0, 100)}...`);
+        }
+        
+        // 2. Only parse JSON if the response is OK (200)
+        const data = await response.json(); 
+        
+        console.log(`Trip confirmation for ${lineId}:`, data.message); 
+        alert(data.message); 
+        
+    } catch (error) {
+        // Display the specific error message (e.g., Server Error (404)...)
+        console.error(`Failed to issue trip command for ${lineId}:`, error.message);
+        alert(error.message || `Failed to issue trip command for ${lineId}.`);
+    }
+};
+
+const handleReset = async (lineId) => {
+    console.log(`Sending reset signal for ${lineId}`);
+    try {
+        const response = await fetch('/api/control/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lineId })
+        });
+        const data = await response.json();
+        alert(data.message); 
+    } catch (error) {
+        console.error(`Failed to issue reset command for ${lineId}:`, error);
+        alert(`Failed to issue reset command for ${lineId}. Check server connection.`);
+    }
+};
+
 // ====================================================================
 // 1. REUSABLE STATUS CARD COMPONENT
 // ====================================================================
-const StatusCard = ({ lineId, data }) => {
+const StatusCard = ({ lineId, data ,onTripClick,onResetClick}) => {
+    
     const getCardClasses = (status) => {
         if (status === 'FAULT') return 'bg-transparent border-red-500 text-red-400';
         if (status === 'NORMAL') return 'bg-transparent border-lime-500 text-lime-400';
@@ -32,19 +81,37 @@ const StatusCard = ({ lineId, data }) => {
                     <span className="font-bold">{status}</span>
                 </p>
                 
-                {status === 'FAULT' && (
-                    <>
-                    <p className="text-lg">
-                        <strong className="w-32 inline-block">Fault Type:</strong> 
-                        <code className="font-bold p-1 rounded-sm text-sm">{faultType}</code>
-                    </p>
-                    <p className="text-lg">
-                    {/* Display the determined section */}
-                    <strong className="w-32 inline-block">Section:</strong> 
-                    <span className="font-bold text-red-500">{location}</span>
-                    </p>
-                    </>
-                )}
+                
+                {/* 1. FAULT Status Display and TRIP Button */}
+{status === 'FAULT' && (
+    <>
+        <p className="text-lg">
+            <strong className="w-32 inline-block">Fault Type:</strong> 
+            <code className="font-bold p-1 rounded-sm text-sm">{faultType}</code>
+        </p>
+        <p className="text-lg">
+            {/* Display the determined section */}
+            <strong className="w-32 inline-block">Section:</strong> 
+            <span className="font-bold text-red-500">{location}</span>
+        </p>
+        <button
+            onClick={() => onTripClick(lineId, faultType)}
+            className="mt-4 w-full bg-rose-700 hover:bg-rose-800 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
+        >
+            🚨 BREAK CIRCUIT: {lineId}
+        </button>
+    </>
+)}
+
+{/* 2. RESET BUTTON (This MUST be checked separately at the same level as FAULT) */}
+{status === 'TRIPPED' && (
+    <button
+        onClick={() => onResetClick(lineId)} 
+        className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
+    >
+        🟢 START MONITORING (RESET)
+    </button>
+)}
                  {status !== 'FAULT' && (
                     <p className="text-lg">
                         <strong className="w-32 inline-block">Last Predict:</strong> 
@@ -84,6 +151,8 @@ const ChartComponent = ({ lineId, data }) => {
         </div>
     );
 };
+
+
 
 // ====================================================================
 // 3. MAIN DASHBOARD COMPONENT
@@ -173,7 +242,7 @@ const AnalysisDashboard = () => {
                     {/* Iterate over the keys in latestStatus to display one card per line */}
                     {Object.keys(latestStatus).length > 0 ? (
                         Object.keys(latestStatus).map((lineId) => (
-                            <StatusCard key={lineId} lineId={lineId} data={latestStatus[lineId]} />
+                            <StatusCard key={lineId} lineId={lineId} data={latestStatus[lineId]} onTripClick={handleTrip} onResetClick={handleReset}/>
                         ))
                     ) : (
                         <p className="col-span-3 text-center text-gray-500">Awaiting first data push from Express server...</p>
