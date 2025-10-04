@@ -65,6 +65,9 @@ A sophisticated full-stack application designed for real-time fault detection, c
 ### Python ML Engine
 ```bash
 cd python-engine
+2.  **Create** and **Activate** the virtual environment:
+    python3 -m venv venv
+    source venv/bin/activate
 pip install -r requirements.txt
 # Ensure model files are present:
 # - fault_classifier_model_optimized.pkl
