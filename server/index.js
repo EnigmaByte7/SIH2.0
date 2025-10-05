@@ -8,7 +8,14 @@ import { Server } from 'socket.io';
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Keep your existing route for other purposes
-import testRoute from './routes/test.js';
+// In server.js, near your other app.use() lines:
+
+import authRoutes from './routes/auth.js'; 
+// ...
+
+// ...
+
+
 
 const app = express();
 const httpServer = createServer(app);
@@ -25,7 +32,7 @@ app.use(cors());
 app.use(express.json());
 
 // You can keep your existing '/api' route
-app.use('/api', testRoute);
+app.use('/api/auth', authRoutes); // Assign the authentication routes
 // --- NEW: Circuit Control Endpoint ---
 // This endpoint receives the signal from the React frontend
 app.post('/api/control/trip', (req, res) => {

@@ -1,4 +1,5 @@
 import React from "react";
+import {Link} from "react-router-dom"
 
 export default function Navbar() {
   return (
@@ -8,12 +9,12 @@ export default function Navbar() {
         <li><a href="#faq" className="hover:text-white">FAQ</a></li>
         <li><a href="#about" className="hover:text-white">About</a></li>
         <li>
-          <a
-            href="/dashboard"
+          <Link
+            to="/login"
             className="bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-zinc-200"
           >
-            Dashboard
-          </a>
+            Log In
+          </Link>
         </li>
       </ul>
     </div>
