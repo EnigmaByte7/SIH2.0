@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 
 // Initialize the Socket.IO connection
 // Point this to your Express server port (e.g., 5001)
-const socket = io('http://localhost:5001'); 
+
 
 const MAX_DATA_POINTS = 50; // Max points to display on the chart before shifting
 
@@ -166,6 +166,7 @@ const AnalysisDashboard = () => {
 
     useEffect(() => {
         // Handle connection status
+        const socket = io('http://localhost:5001'); 
         socket.on('connect', () => setIsSocketConnected(true));
         socket.on('disconnect', () => setIsSocketConnected(false));
         
