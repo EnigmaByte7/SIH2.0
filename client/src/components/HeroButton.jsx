@@ -8,10 +8,10 @@ export default function HeroButton() {
       <HoverBorderGradient
         containerClassName="rounded-full"
         as="a"
-        href="/dashboard"
+        href="/login"
         className="bg-black text-white flex items-center space-x-2"
       >
-        <span>Dashboard</span>
+        <span>Continue</span>
         <ArrowRightIcon size={20} color='white' />
       </HoverBorderGradient>
     </div>

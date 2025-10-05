@@ -1,15 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import {BrowserRouter, Routes, Route} from "react-router"
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom'; // Corrected import
+import './index.css';
+import App from './App.jsx';
 
-createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={<App />}/>
-      <Route path="/dashboard" element={<Dashboard />}/>
-    </Routes>
-  </BrowserRouter>
-)
+// Get the root element
+const rootElement = document.getElementById('root');
+
+createRoot(rootElement).render(
+  // Use React.StrictMode for development checks
+  <React.StrictMode>
+    {/* CRITICAL FIX: BrowserRouter provides the routing context for the entire application */}
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);
